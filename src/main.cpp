@@ -82,9 +82,4 @@ int main() {
         // Attente entre les générations
         WaitTime(DELTA_TIME);
     }
-
-    CloseWindow();
-    return 0;
-}
-
-
+}    
