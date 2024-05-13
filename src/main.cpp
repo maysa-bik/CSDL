@@ -1,91 +1,90 @@
-#include "search.h"
+#include "raylib.h"
 
-const int GAME_WIDTH = 640;
-const int GAME_HEIGHT = 480;
+#define WIDTH 80
+#define HEIGHT 60
+#define DELTA_TIME 0.1f // Temps d'attente entre les générations en secondes
 
-bool isAlive(
-    std::array<std::array<int, GAME_HEIGHT>, GAME_HEIGHT>& game, 
-    const int x,
-    const int y)
-{
-    int alive = 0;
-    // testing the left  
-    if(x > 0 && game[x-1][y] == 1) alive+=1;
-    // testing the right
-    if(x < GAME_HEIGHT && game[x+1][y] == 1) alive+=1;
-    // testing top 
-    if(y > 0 && game[x][y-1] == 1) alive+=1;
-    // testing bottom 
-    if(y < GAME_HEIGHT && game[x][y+1] == 1) alive+=1;
+int grid[HEIGHT][WIDTH];
+int ngrid[HEIGHT][WIDTH];
 
+void init() {
+    for (int i = 0; i < HEIGHT; i++)
+        for (int j = 0; j < WIDTH; j++)
+            grid[i][j] = ngrid[i][j] = 0;
 
-    // testing top left 
-    if(y > 0 && x > 0 && game[x-1][y-1] == 1) alive+=1;
-    // testing top right
-    if (y > 0 && x < GAME_HEIGHT && game[x+1][y-1] == 1) alive+=1;
-    // testing bottom left 
-    if(y < GAME_HEIGHT && x > 0 && game[x-1][y+1] == 1) alive+=1;
-    // testing bottom right
-    if(y < GAME_HEIGHT && x < GAME_WIDTH && game[x+1][y+1] == 1) alive+=1;
-
-    // live and fewer than 2 die 
-    if(game[x][y] == 1 && alive < 2) return false;
-    // alive and 2 or 3 then live 
-    if(game[x][y] == 1 && (alive == 2 || alive == 3)) return true;
-    // more than 3 live die 
-    if(alive > 3) return false;
-    // 3 alive and point is dead, come to life 
-    if(game[x][y] == 0 alive == 3) return true;
-
-    return false;
-
+    // Initialisation d'un motif de départ
+    grid[HEIGHT / 2 - 2][WIDTH / 2 - 2] = grid[HEIGHT / 2 - 2][WIDTH / 2 - 1] =
+        grid[HEIGHT / 2 - 1][WIDTH / 2 - 2] = grid[HEIGHT / 2 - 1][WIDTH / 2 - 1] = 1;
 }
-int main()
-{
-    G screen;
-    std::array<std::<int, GAME_HEIGHT, GAME_WIDTH> display {};
-    std::array<std::<int, GAME_HEIGHT, GAME_WIDTH> swap {};
 
-    // Create random points
-    //
-    for(auto& row : display)
-            std::generate(row.begin(), row.end(), []() { return rand() % 10 == 0 ? 1 : 0; });
+int count_neighbours(int y, int x) {
+    int count = 0;
 
-    while(true)
-    {
-        // check for alive points
-        //
-        for(int i = 0; i < GAME_WIDTH; ++i)
-        {
-            for(int k = 0; k < GAME_HEIGHT; ++k)
-            {
-                swap[i][k] = isAlive(display, i, k) ? 1 : 0;
+    for (int j = -1; j <= 1; j++)
+        for (int i = -1; i <= 1; i++)
+            if (!(i == 0 && j == 0) && grid[(y + HEIGHT + j) % HEIGHT][(x + WIDTH + i) % WIDTH] == 1)
+                count++;
+
+    return count;
+}
+
+void next_generation() {
+    for (int y = 0; y < HEIGHT; y++)
+        for (int x = 0; x < WIDTH; x++) {
+            int neighbours = count_neighbours(y, x);
+
+            if (grid[y][x] == 1) {
+                if (neighbours < 2 || neighbours > 3)
+                    ngrid[y][x] = 0;
+                else
+                    ngrid[y][x] = 1;
+            } else {
+                if (neighbours == 3)
+                    ngrid[y][x] = 1;
+                else
+                    ngrid[y][x] = 0;
             }
         }
-        // Draw 
-        //
-        for(int i = 0; i < GAME_WIDTH; ++i)
-        {
-            for(int k = 0; k < GAME_HEIGHT; ++k)
-            {
-                if(swap[i][k])
-                {
-                    screen.drawpixel(i,k);
-                }
 
+    // Copie de la grille temporaire dans la grille principale
+    for (int y = 0; y < HEIGHT; y++)
+        for (int x = 0; x < WIDTH; x++)
+            grid[y][x] = ngrid[y][x];
+}
+
+void draw_grid() {
+    BeginDrawing();
+
+    // Effacement de la fenêtre seulement si nécessaire
+    ClearBackground(RAYWHITE);
+
+    // Dessin des cellules vivantes
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (grid[y][x] == 1) {
+                DrawRectangle(x * 10, y * 10, 10, 10, BLACK);
             }
         }
-        // Swap buffers
-        //
-        std::copy(swap.begin(), swap.end(), display.begin());
+    }
 
-        // Display to screen
-        //
-        screen.update();
-        SDL_Delay(20)
-        screen.input();
-        screen.clearpixels();
-        
-
-    }        
+    EndDrawing();
 }
+
+int main() {
+    InitWindow(WIDTH * 10, HEIGHT * 10, "Game of Life");
+    SetTargetFPS(60);
+
+    init();
+
+    while (!WindowShouldClose()) {
+        next_generation();
+        draw_grid();
+        // Attente entre les générations
+        WaitTime(DELTA_TIME);
+    }
+
+    CloseWindow();
+    return 0;
+}
+
+
